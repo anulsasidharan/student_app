@@ -3,7 +3,16 @@ import pandas as pd
 import numpy as np
 import pickle
 from sklearn.preprocessing import StandardScaler, LabelEncoder
- 
+from pymongo.mongo_client import MongoClient
+from pymongo.server_api import ServerApi
+from mongodbconnect import uri
+
+
+# Create a new client and connect to the server
+client = MongoClient(uri, server_api=ServerApi('1'))
+db = client['student']
+collection = db['student_pred']
+
 
 # Step 1: Load the model
 def load_model():
@@ -14,7 +23,7 @@ def load_model():
 # Step 2: Custom function to get the data and transform into standardizeed form
 def preprocessing_input_data(data, scaler, le):
     #Convert the categorical data into numeric form
-    data["Extracurricular Activities"] = le.transform([data["Extracurricular Activities"]])
+    data["Extracurricular Activities"] = le.transform([data["Extracurricular Activities"]])[0]
     df = pd.DataFrame([data])
     df_transformed = scaler.transform(df)
     return df_transformed
@@ -54,6 +63,9 @@ def main():
 
         prediction = predict_data(user_data)
         st.success(f"Your predection result is {prediction}")
+        user_data['prediction'] = round(float(prediction[0]),2)
+        user_data = {key: int(value) if isinstance(value, np.integer) else float(value) if isinstance(value, np.floating) else value for key, value in user_data.items()}
+        collection.insert_one(user_data)
 
 
 if __name__ == "__main__":
